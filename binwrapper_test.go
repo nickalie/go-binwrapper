@@ -48,7 +48,7 @@ func ExampleNewBinWrapper() {
 	fmt.Printf("err: %v\n", err)
 }
 
-func TestNewBinWrapper(t *testing.T) {
+func TestNewBinWrapperNoError(t *testing.T) {
 	base := "https://storage.googleapis.com/downloads.webmproject.org/releases/webp/"
 
 	bin := binwrapper.NewBinWrapper().
@@ -86,5 +86,16 @@ func TestNewBinWrapper(t *testing.T) {
 
 	if err != nil {
 		t.Errorf("Error should be nil. Got %v\n", err)
+	}
+}
+
+func TestNewBinWrapperError(t *testing.T) {
+	bin := binwrapper.NewBinWrapper().
+		ExecPath("cwebp")
+
+	err := bin.Run("-version")
+
+	if err == nil {
+		t.Errorf("Error should'n be nil. Got %v\n", err)
 	}
 }
