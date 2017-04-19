@@ -1,7 +1,7 @@
 # Golang Binary Wrapper
 
 [![](https://img.shields.io/badge/docs-godoc-blue.svg)](https://godoc.org/github.com/nickalie/go-binwrapper)
-![](https://circleci.com/gh/nickalie/go-binwrapper.png?circle-token=cf936dc931a1c9d0056377518a0d7ee385d7fd9e)
+[![](https://circleci.com/gh/nickalie/go-binwrapper.png?circle-token=cf936dc931a1c9d0056377518a0d7ee385d7fd9e)](https://circleci.com/gh/nickalie/go-binwrapper)
 
 Inspired by and partially ported from npm package [bin-wrapper](https://github.com/kevva/bin-wrapper)
 
