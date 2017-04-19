@@ -14,6 +14,7 @@ import (
 	"github.com/mholt/archiver"
 	"fmt"
 	"io/ioutil"
+	"runtime"
 )
 
 type Src struct {
@@ -29,15 +30,16 @@ type BinWrapper struct {
 	execPath string
 	strip    int
 	output   []byte
+	autoExe  bool
 
 	//Contains the binary's standard error after Run was called
-	StdErr   []byte
+	StdErr []byte
 
 	//Contains the binary's standard output after Run was called
-	StdOut   []byte
+	StdOut []byte
 
 	//Contains arguments were added with Arg method
-	Args     []string
+	Args []string
 }
 
 //Creates new Src instance
@@ -87,9 +89,24 @@ func (b *BinWrapper) Dest(dest string) *BinWrapper {
 }
 
 //Define which file to use as the binary
-func (b *BinWrapper) ExecPath(use string) *BinWrapper {
-	b.execPath = use
+func (b *BinWrapper) ExecPath(execPath string) *BinWrapper {
+
+	if b.autoExe && runtime.GOOS == "windows" {
+		ext := strings.ToLower(filepath.Ext(execPath))
+
+		if ext != ".exe" {
+			execPath += ".exe"
+		}
+	}
+
+	b.execPath = execPath
 	return b
+}
+
+//Adds .exe extension for windows executable path
+func (b *BinWrapper) AutoExe() *BinWrapper {
+	b.autoExe = true
+	return b.ExecPath(b.execPath)
 }
 
 //Skips downloading a file
@@ -127,12 +144,13 @@ func (b *BinWrapper) Path() string {
 
 }
 
-//Removes all arguments set with Arg method
+//Removes all arguments set with Arg method, cleans StdOut and StdErr
 func (b *BinWrapper) Reset() *BinWrapper {
 	b.Args = []string{}
+	b.StdOut = nil
+	b.StdErr = nil
 	return b
 }
-
 
 //Runs the binary with provided arg list.
 //Arg list is appended to args set through Arg method
