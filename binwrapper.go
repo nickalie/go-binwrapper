@@ -1,4 +1,4 @@
-// Binary wrapper that makes command line tools seamlessly available as local dependencies
+// Binary wrapper that makes command line tools seamlessly available as local golang dependencies.
 // Inspired by and partially ported from npm package bin-wrapper: https://github.com/kevva/bin-wrapper
 package binwrapper
 
