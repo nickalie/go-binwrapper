@@ -127,6 +127,13 @@ func (b *BinWrapper) Path() string {
 
 }
 
+//Removes all arguments set with Arg method
+func (b *BinWrapper) Reset() *BinWrapper {
+	b.Args = []string{}
+	return b
+}
+
+
 //Runs the binary with provided arg list.
 //Arg list is appended to args set through Arg method
 func (b *BinWrapper) Run(arg ...string) error {
