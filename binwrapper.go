@@ -32,14 +32,12 @@ type BinWrapper struct {
 	output   []byte
 	autoExe  bool
 
-	//Contains the binary's standard error after Run was called
-	StdErr []byte
+	stdErr []byte
+	stdOut []byte
+	stdIn  io.Reader
 
-	//Contains the binary's standard output after Run was called
-	StdOut []byte
-
-	//Contains arguments were added with Arg method
-	Args []string
+	args  []string
+	debug bool
 }
 
 //Creates new Src instance
@@ -124,8 +122,19 @@ func (b *BinWrapper) Strip(value int) *BinWrapper {
 //Adds command line argument to run the binary with.
 func (b *BinWrapper) Arg(name string, values ...string) *BinWrapper {
 	values = append([]string{name}, values...)
-	b.Args = append(b.Args, values...)
+	b.args = append(b.args, values...)
 	return b
+}
+
+//Enabled debug output
+func (b *BinWrapper) Debug() *BinWrapper {
+	b.debug = true
+	return b
+}
+
+//Returns arguments were added with Arg method
+func (b *BinWrapper) Args() []string {
+	return b.args
 }
 
 //Returns the full path to the binary
@@ -144,11 +153,27 @@ func (b *BinWrapper) Path() string {
 
 }
 
+func (b *BinWrapper) StdIn(reader io.Reader) *BinWrapper {
+	b.stdIn = reader
+	return b
+}
+
+//Returns the binary's standard output after Run was called
+func (b *BinWrapper) StdOut() []byte {
+	return b.stdOut
+}
+
+//Returns the binary's standard error after Run was called
+func (b *BinWrapper) StdErr() []byte {
+	return b.stdErr
+}
+
 //Removes all arguments set with Arg method, cleans StdOut and StdErr
 func (b *BinWrapper) Reset() *BinWrapper {
-	b.Args = []string{}
-	b.StdOut = nil
-	b.StdErr = nil
+	b.args = []string{}
+	b.stdOut = nil
+	b.stdErr = nil
+	b.stdIn = nil
 	return b
 }
 
@@ -164,9 +189,18 @@ func (b *BinWrapper) Run(arg ...string) error {
 		}
 	}
 
-	arg = append(b.Args, arg...)
+	arg = append(b.args, arg...)
+
+	if b.debug {
+		fmt.Println("BinWrapper.Run: " + b.Path() + " " + strings.Join(arg, " "))
+	}
 
 	cmd := exec.Command(b.Path(), arg...)
+
+	if b.stdIn != nil {
+		cmd.Stdin = b.stdIn
+	}
+
 	stdout, _ := cmd.StdoutPipe()
 	stderr, _ := cmd.StderrPipe()
 
@@ -177,8 +211,8 @@ func (b *BinWrapper) Run(arg ...string) error {
 	}
 
 	cmd.CombinedOutput()
-	b.StdOut, _ = ioutil.ReadAll(stdout)
-	b.StdErr, _ = ioutil.ReadAll(stderr)
+	b.stdOut, _ = ioutil.ReadAll(stdout)
+	b.stdErr, _ = ioutil.ReadAll(stderr)
 	return cmd.Wait()
 }
 
