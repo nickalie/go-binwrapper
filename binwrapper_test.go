@@ -43,8 +43,8 @@ func ExampleNewBinWrapper() {
 
 	err := bin.Run("-version")
 
-	fmt.Printf("stdout: %s\n", string(bin.StdOut))
-	fmt.Printf("stderr: %s\n", string(bin.StdErr))
+	fmt.Printf("stdout: %s\n", string(bin.StdOut()))
+	fmt.Printf("stderr: %s\n", string(bin.StdErr()))
 	fmt.Printf("err: %v\n", err)
 }
 
