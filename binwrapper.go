@@ -164,6 +164,10 @@ func (b *BinWrapper) StdOut() []byte {
 	return b.stdOut
 }
 
+func (b *BinWrapper) CombinedOutput() []byte {
+	return append(b.stdOut, b.stdErr...)
+}
+
 func (b *BinWrapper) SetStdOut(writer io.Writer) *BinWrapper {
 	b.stdOutWriter = writer
 	return b;
