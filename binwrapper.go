@@ -268,17 +268,16 @@ func (b *BinWrapper) extractFile(file string) error {
 	}
 
 	if arc == nil {
-		fmt.Printf("%s not an archive or have unsupported archive format", file)
+		fmt.Printf("%s is not an archive or have unsupported archive format\n", file)
 		return nil
 	}
 
+	defer os.Remove(file)
 	err := arc.Open(file, b.dest)
 
 	if err != nil {
 		return err
 	}
-
-	os.Remove(file)
 
 	if b.strip == 0 {
 		return nil

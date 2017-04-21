@@ -4,6 +4,7 @@ import (
 	"github.com/nickalie/go-binwrapper"
 	"fmt"
 	"testing"
+	"github.com/stretchr/testify/assert"
 )
 
 //Example of wrapping cwebp command line tool
@@ -70,23 +71,18 @@ func TestNewBinWrapperNoError(t *testing.T) {
 		binwrapper.NewSrc().
 			Url(base + "libwebp-0.6.0-windows-x64.zip").
 			Os("win32").
-			Arch("x64").
-			ExecPath("cwebp.exe")).
+			Arch("x64")).
 		Src(
 		binwrapper.NewSrc().
 			Url(base + "libwebp-0.6.0-windows-x86.zip").
 			Os("win32").
-			Arch("x86").
-			ExecPath("cwebp.exe")).
+			Arch("x86")).
 		Strip(2).
 		Dest("vendor/cwebp").
-		ExecPath("cwebp")
+		ExecPath("cwebp").AutoExe()
 
 	err := bin.Run("-version")
-
-	if err != nil {
-		t.Errorf("Error should be nil. Got %v\n", err)
-	}
+	assert.Nil(t, err)
 }
 
 func TestNewBinWrapperError(t *testing.T) {
@@ -94,8 +90,5 @@ func TestNewBinWrapperError(t *testing.T) {
 		ExecPath("cwebp")
 
 	err := bin.Run("-version")
-
-	if err == nil {
-		t.Errorf("Error should'n be nil. Got %v\n", err)
-	}
+	assert.NotNil(t, err)
 }
