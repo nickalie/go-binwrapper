@@ -32,9 +32,10 @@ type BinWrapper struct {
 	output   []byte
 	autoExe  bool
 
-	stdErr []byte
-	stdOut []byte
-	stdIn  io.Reader
+	stdErr       []byte
+	stdOut       []byte
+	stdIn        io.Reader
+	stdOutWriter io.Writer
 
 	args  []string
 	debug bool
@@ -163,6 +164,11 @@ func (b *BinWrapper) StdOut() []byte {
 	return b.stdOut
 }
 
+func (b *BinWrapper) SetStdOut(writer io.Writer) *BinWrapper {
+	b.stdOutWriter = writer
+	return b;
+}
+
 //Returns the binary's standard error after Run was called
 func (b *BinWrapper) StdErr() []byte {
 	return b.stdErr
@@ -201,7 +207,14 @@ func (b *BinWrapper) Run(arg ...string) error {
 		cmd.Stdin = b.stdIn
 	}
 
-	stdout, _ := cmd.StdoutPipe()
+	var stdout io.Reader
+
+	if b.stdOutWriter != nil {
+		cmd.Stdout = b.stdOutWriter
+	} else {
+		stdout, _ = cmd.StdoutPipe()
+	}
+
 	stderr, _ := cmd.StderrPipe()
 
 	err := cmd.Start()
@@ -211,7 +224,11 @@ func (b *BinWrapper) Run(arg ...string) error {
 	}
 
 	cmd.CombinedOutput()
-	b.stdOut, _ = ioutil.ReadAll(stdout)
+
+	if stdout != nil {
+		b.stdOut, _ = ioutil.ReadAll(stdout)
+	}
+
 	b.stdErr, _ = ioutil.ReadAll(stderr)
 	return cmd.Wait()
 }
