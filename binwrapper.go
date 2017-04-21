@@ -38,6 +38,7 @@ type BinWrapper struct {
 	stdOutWriter io.Writer
 
 	args  []string
+	env   []string
 	debug bool
 }
 
@@ -170,7 +171,12 @@ func (b *BinWrapper) CombinedOutput() []byte {
 
 func (b *BinWrapper) SetStdOut(writer io.Writer) *BinWrapper {
 	b.stdOutWriter = writer
-	return b;
+	return b
+}
+
+func (b *BinWrapper) Env(env []string) *BinWrapper {
+	b.env = env
+	return b
 }
 
 //Returns the binary's standard error after Run was called
@@ -185,6 +191,7 @@ func (b *BinWrapper) Reset() *BinWrapper {
 	b.stdErr = nil
 	b.stdIn = nil
 	b.stdOutWriter = nil
+	b.env = nil
 	return b
 }
 
@@ -207,6 +214,10 @@ func (b *BinWrapper) Run(arg ...string) error {
 	}
 
 	cmd := exec.Command(b.Path(), arg...)
+
+	if b.env != nil {
+		cmd.Env = b.env
+	}
 
 	if b.stdIn != nil {
 		cmd.Stdin = b.stdIn
