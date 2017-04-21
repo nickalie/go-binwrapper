@@ -180,6 +180,7 @@ func (b *BinWrapper) Reset() *BinWrapper {
 	b.stdOut = nil
 	b.stdErr = nil
 	b.stdIn = nil
+	b.stdOutWriter = nil
 	return b
 }
 
