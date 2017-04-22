@@ -1,5 +1,12 @@
+dependencies:
+  pre:
+    - go get -v github.com/axw/gocov/...
+    - go get github.com/AlekSi/gocov-xml
+    - wget -O /opt/ccr.jar https://github.com/codacy/codacy-coverage-reporter/releases/download/1.0.13/codacy-coverage-reporter-1.0.13-assembly.jar
 test:
   override:
     - go test -v -race -coverprofile=coverage.txt -covermode=atomic ./...
   post:
     - bash <(curl -s https://codecov.io/bash)
+    - gocov convert coverage.txt | gocov-xml > coverage.xml
+    - java -cp /opt/ccr.jar com.codacy.CodacyCoverageReporter -l Go -r coverage.xml
