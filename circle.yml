@@ -9,4 +9,4 @@ test:
   post:
     - bash <(curl -s https://codecov.io/bash)
     - gocov convert coverage.txt | gocov-xml > coverage.xml
-    - java -cp ~/ccr.jar com.codacy.CodacyCoverageReporter -l Go -r coverage.xml
+    - java -cp ~/ccr.jar com.codacy.CodacyCoverageReporter -r coverage.xml
