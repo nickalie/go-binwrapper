@@ -2,7 +2,7 @@
 
 [![](https://img.shields.io/badge/docs-godoc-blue.svg)](https://godoc.org/github.com/nickalie/go-binwrapper)
 [![](https://circleci.com/gh/nickalie/go-binwrapper.png?circle-token=cf936dc931a1c9d0056377518a0d7ee385d7fd9e)](https://circleci.com/gh/nickalie/go-binwrapper)
-[![Codacy Badge](https://api.codacy.com/project/badge/Grade/1e4ca0a5a091435c8fd05596d913ae1a)](https://www.codacy.com/app/nickalie/go-binwrapper?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=nickalie/go-binwrapper&amp;utm_campaign=Badge_Grade)
+[![Codacy Badge](https://api.codacy.com/project/badge/Grade/3b76e4623faf4575ac5431b3f45c40df)](https://www.codacy.com/app/nickalie/go-binwrapper?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=nickalie/go-binwrapper&amp;utm_campaign=Badge_Grade)
 
 Inspired by and partially ported from npm package [bin-wrapper](https://github.com/kevva/bin-wrapper)
 
