@@ -1,7 +1,7 @@
 version: 2
 jobs:
   build:
-    working_directory: /go/src/github/nickalie/go-binwrapper
+    working_directory: /go/src/github.com/nickalie/go-binwrapper
     docker:
       - image: golang
     steps:

@@ -418,6 +418,10 @@ func (b *BinWrapper) downloadFile(value string) (string, error) {
 
 	defer resp.Body.Close()
 
+	if !(resp.StatusCode >= 200 && resp.StatusCode < 400) {
+		return "", errors.New("Unable to download " + value)
+	}
+
 	_, err = io.Copy(file, resp.Body)
 
 	return fileName, err
