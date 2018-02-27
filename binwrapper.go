@@ -246,8 +246,6 @@ func (b *BinWrapper) Run(arg ...string) error {
 		return err
 	}
 
-	cmd.CombinedOutput()
-
 	if stdout != nil {
 		b.stdOut, _ = ioutil.ReadAll(stdout)
 	}
