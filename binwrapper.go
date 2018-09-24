@@ -3,6 +3,7 @@
 package binwrapper
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"github.com/mholt/archiver"
@@ -15,6 +16,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+	"time"
 )
 
 // Src defines executable source
@@ -39,9 +41,11 @@ type BinWrapper struct {
 	stdIn        io.Reader
 	stdOutWriter io.Writer
 
-	args  []string
-	env   []string
-	debug bool
+	args    []string
+	env     []string
+	debug   bool
+	cmd     *exec.Cmd
+	timeout time.Duration
 }
 
 // NewSrc creates new Src instance
@@ -81,6 +85,12 @@ func NewBinWrapper() *BinWrapper {
 // Src adds a Src to BinWrapper
 func (b *BinWrapper) Src(src *Src) *BinWrapper {
 	b.src = append(b.src, src)
+	return b
+}
+
+// Timeout sets timeout for the command. By default it's 0 (binary will run till end).
+func (b *BinWrapper) Timeout(timeout time.Duration) *BinWrapper {
+	b.timeout = timeout
 	return b
 }
 
@@ -199,13 +209,14 @@ func (b *BinWrapper) Reset() *BinWrapper {
 	b.stdIn = nil
 	b.stdOutWriter = nil
 	b.env = nil
+	b.cmd = nil
 	return b
 }
 
 // Run runs the binary with provided arg list.
 // Arg list is appended to args set through Arg method
+// Returns context.DeadlineExceeded in case of timeout
 func (b *BinWrapper) Run(arg ...string) error {
-
 	if b.src != nil && len(b.src) > 0 {
 		err := b.findExisting()
 
@@ -220,27 +231,41 @@ func (b *BinWrapper) Run(arg ...string) error {
 		fmt.Println("BinWrapper.Run: " + b.Path() + " " + strings.Join(arg, " "))
 	}
 
-	cmd := exec.Command(b.Path(), arg...)
+	var ctx context.Context
+	var cancel context.CancelFunc
+
+	if b.timeout > 0 {
+		ctx, cancel = context.WithTimeout(context.Background(), b.timeout)
+	} else {
+		ctx = context.Background()
+		cancel = func() {
+
+		}
+	}
+
+	defer cancel()
+
+	b.cmd = exec.CommandContext(ctx, b.Path(), arg...)
 
 	if b.env != nil {
-		cmd.Env = b.env
+		b.cmd.Env = b.env
 	}
 
 	if b.stdIn != nil {
-		cmd.Stdin = b.stdIn
+		b.cmd.Stdin = b.stdIn
 	}
 
 	var stdout io.Reader
 
 	if b.stdOutWriter != nil {
-		cmd.Stdout = b.stdOutWriter
+		b.cmd.Stdout = b.stdOutWriter
 	} else {
-		stdout, _ = cmd.StdoutPipe()
+		stdout, _ = b.cmd.StdoutPipe()
 	}
 
-	stderr, _ := cmd.StderrPipe()
+	stderr, _ := b.cmd.StderrPipe()
 
-	err := cmd.Start()
+	err := b.cmd.Start()
 
 	if err != nil {
 		return err
@@ -251,7 +276,22 @@ func (b *BinWrapper) Run(arg ...string) error {
 	}
 
 	b.stdErr, _ = ioutil.ReadAll(stderr)
-	return cmd.Wait()
+	err = b.cmd.Wait()
+
+	if ctx.Err() == context.DeadlineExceeded {
+		return context.DeadlineExceeded
+	}
+
+	return err
+}
+
+// Kill terminates the process
+func (b *BinWrapper) Kill() error {
+	if b.cmd != nil && b.cmd.Process != nil {
+		return b.cmd.Process.Kill()
+	}
+
+	return nil
 }
 
 func (b *BinWrapper) findExisting() error {
