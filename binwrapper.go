@@ -6,7 +6,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/mholt/archiver"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -17,6 +16,8 @@ import (
 	"runtime"
 	"strings"
 	"time"
+
+	"github.com/mholt/archiver"
 )
 
 // Src defines executable source
@@ -336,24 +337,12 @@ func (b *BinWrapper) download() error {
 }
 
 func (b *BinWrapper) extractFile(file string) error {
-	var arc archiver.Archiver
-
-	for _, v := range archiver.SupportedFormats {
-		if v.Match(file) {
-			arc = v
-			break
-		}
-	}
-
-	if arc == nil {
-		fmt.Printf("%s is not an archive or have unsupported archive format\n", file)
-		return nil
-	}
 
 	defer os.Remove(file)
-	err := arc.Open(file, b.dest)
+	err := archiver.Unarchive(file, b.dest)
 
 	if err != nil {
+		fmt.Printf("%s is not an archive or have unsupported archive format\n", file)
 		return err
 	}
 
