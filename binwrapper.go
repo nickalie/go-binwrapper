@@ -3,6 +3,9 @@
 package binwrapper
 
 import (
+	"archive/tar"
+	"archive/zip"
+	"compress/gzip"
 	"context"
 	"errors"
 	"fmt"
@@ -16,8 +19,6 @@ import (
 	"runtime"
 	"strings"
 	"time"
-
-	"github.com/mholt/archiver"
 )
 
 // Src defines executable source
@@ -337,13 +338,22 @@ func (b *BinWrapper) download() error {
 }
 
 func (b *BinWrapper) extractFile(file string) error {
-
 	defer os.Remove(file)
-	err := archiver.Unarchive(file, b.dest)
 
-	if err != nil {
-		fmt.Printf("%s is not an archive or have unsupported archive format\n", file)
-		return err
+	// Determine the file extension to select the appropriate unarchiving method
+	switch {
+	case strings.HasSuffix(file, ".zip"):
+		if err := unzip(file, b.dest); err != nil {
+			fmt.Printf("%s is not a valid zip archive\n", file)
+			return err
+		}
+	case strings.HasSuffix(file, ".tar.gz") || strings.HasSuffix(file, ".tgz"):
+		if err := untar(file, b.dest); err != nil {
+			fmt.Printf("%s is not a valid tar.gz archive\n", file)
+			return err
+		}
+	default:
+		return fmt.Errorf("unsupported archive format: %s", file)
 	}
 
 	if b.strip == 0 {
@@ -452,4 +462,109 @@ func (b *BinWrapper) downloadFile(value string) (string, error) {
 	_, err = io.Copy(file, resp.Body)
 
 	return fileName, err
+}
+func unzip(src, dest string) error {
+	r, err := zip.OpenReader(src)
+	if err != nil {
+		return err
+	}
+	defer r.Close()
+
+	for _, f := range r.File {
+		fpath := filepath.Join(dest, f.Name)
+
+		// Validate file path to prevent Zip Slip vulnerability
+		if !strings.HasPrefix(fpath, filepath.Clean(dest)+string(os.PathSeparator)) {
+			return fmt.Errorf("illegal file path: %s", fpath)
+		}
+
+		if f.FileInfo().IsDir() {
+			os.MkdirAll(fpath, os.ModePerm)
+			continue
+		}
+
+		// Create directories leading up to the file
+		if err = os.MkdirAll(filepath.Dir(fpath), os.ModePerm); err != nil {
+			return err
+		}
+
+		outFile, err := os.OpenFile(fpath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, f.Mode())
+		if err != nil {
+			return err
+		}
+
+		rc, err := f.Open()
+		if err != nil {
+			outFile.Close()
+			return err
+		}
+
+		_, err = io.Copy(outFile, rc)
+
+		// Close files to prevent resource leaks
+		outFile.Close()
+		rc.Close()
+
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+func untar(src, dest string) error {
+	file, err := os.Open(src)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	var fileReader io.Reader = file
+
+	if strings.HasSuffix(src, ".gz") {
+		if fileReader, err = gzip.NewReader(file); err != nil {
+			return err
+		}
+	}
+
+	tarReader := tar.NewReader(fileReader)
+
+	for {
+		header, err := tarReader.Next()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return err
+		}
+
+		fpath := filepath.Join(dest, header.Name)
+
+		// Validate file path to prevent Tar Slip vulnerability
+		if !strings.HasPrefix(fpath, filepath.Clean(dest)+string(os.PathSeparator)) {
+			return fmt.Errorf("illegal file path: %s", fpath)
+		}
+
+		switch header.Typeflag {
+		case tar.TypeDir:
+			if err := os.MkdirAll(fpath, os.ModePerm); err != nil {
+				return err
+			}
+		case tar.TypeReg:
+			if err := os.MkdirAll(filepath.Dir(fpath), os.ModePerm); err != nil {
+				return err
+			}
+			outFile, err := os.OpenFile(fpath, os.O_CREATE|os.O_RDWR, os.FileMode(header.Mode))
+			if err != nil {
+				return err
+			}
+			if _, err := io.Copy(outFile, tarReader); err != nil {
+				outFile.Close()
+				return err
+			}
+			outFile.Close()
+		default:
+			// Handle other file types if necessary
+		}
+	}
+	return nil
 }
