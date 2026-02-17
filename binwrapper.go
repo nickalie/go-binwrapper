@@ -208,16 +208,30 @@ func (b *BinWrapper) Run(arg ...string) error {
 		return err
 	}
 
+	var stdoutErr, stderrErr error
+	var wg sync.WaitGroup
+
 	if stdout != nil {
-		b.stdOut, err = io.ReadAll(stdout)
-		if err != nil {
-			return fmt.Errorf("failed to read stdout: %w", err)
-		}
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			b.stdOut, stdoutErr = io.ReadAll(stdout)
+		}()
 	}
 
-	b.stdErr, err = io.ReadAll(stderr)
-	if err != nil {
-		return fmt.Errorf("failed to read stderr: %w", err)
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		b.stdErr, stderrErr = io.ReadAll(stderr)
+	}()
+
+	wg.Wait()
+
+	if stdoutErr != nil {
+		return fmt.Errorf("failed to read stdout: %w", stdoutErr)
+	}
+	if stderrErr != nil {
+		return fmt.Errorf("failed to read stderr: %w", stderrErr)
 	}
 
 	err = cmd.Wait()
