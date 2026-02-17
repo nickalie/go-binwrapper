@@ -158,6 +158,8 @@ func (b *BinWrapper) Reset() *BinWrapper {
 // Returns context.DeadlineExceeded in case of timeout
 func (b *BinWrapper) Run(arg ...string) error {
 	arg = append(b.args, arg...)
+	b.stdOut = nil
+	b.stdErr = nil
 
 	if b.debug {
 		fmt.Println("BinWrapper.Run: " + b.Path() + " " + strings.Join(arg, " "))
@@ -172,10 +174,6 @@ func (b *BinWrapper) Run(arg ...string) error {
 	}
 
 	cmd := exec.CommandContext(ctx, b.Path(), arg...)
-
-	b.mu.Lock()
-	b.cmd = cmd
-	b.mu.Unlock()
 
 	if b.env != nil {
 		cmd.Env = b.env
@@ -203,10 +201,13 @@ func (b *BinWrapper) Run(arg ...string) error {
 	}
 
 	err = cmd.Start()
-
 	if err != nil {
 		return err
 	}
+
+	b.mu.Lock()
+	b.cmd = cmd
+	b.mu.Unlock()
 
 	var stdoutErr, stderrErr error
 	var wg sync.WaitGroup
@@ -246,11 +247,10 @@ func (b *BinWrapper) Run(arg ...string) error {
 // Kill terminates the process
 func (b *BinWrapper) Kill() error {
 	b.mu.Lock()
-	cmd := b.cmd
-	b.mu.Unlock()
+	defer b.mu.Unlock()
 
-	if cmd != nil && cmd.Process != nil {
-		return cmd.Process.Kill()
+	if b.cmd != nil && b.cmd.Process != nil {
+		return b.cmd.Process.Kill()
 	}
 
 	return nil
