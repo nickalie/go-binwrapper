@@ -5,6 +5,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -181,6 +182,10 @@ func TestKillBeforeRun(t *testing.T) {
 }
 
 func TestDir(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("pwd not available on Windows")
+	}
+
 	dir := t.TempDir()
 
 	bin := binwrapper.NewBinWrapper().
@@ -202,6 +207,10 @@ func TestDir(t *testing.T) {
 }
 
 func TestDirReset(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("pwd not available on Windows")
+	}
+
 	dir := t.TempDir()
 
 	bin := binwrapper.NewBinWrapper().
