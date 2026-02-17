@@ -3,6 +3,7 @@ package binwrapper_test
 import (
 	"bytes"
 	"context"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -177,6 +178,52 @@ func TestKillBeforeRun(t *testing.T) {
 	bin := binwrapper.NewBinWrapper()
 	err := bin.Kill()
 	assert.NoError(t, err)
+}
+
+func TestDir(t *testing.T) {
+	dir := t.TempDir()
+
+	bin := binwrapper.NewBinWrapper().
+		ExecPath("pwd").
+		Dir(dir)
+
+	err := bin.Run()
+	assert.NoError(t, err)
+
+	// Resolve symlinks to handle cases like /tmp -> /private/tmp on macOS
+	expected, err := filepath.EvalSymlinks(dir)
+	require.NoError(t, err)
+
+	assert.Equal(t, expected+"\n", string(bin.StdOut()))
+}
+
+func TestDirReset(t *testing.T) {
+	dir := t.TempDir()
+
+	bin := binwrapper.NewBinWrapper().
+		ExecPath("pwd").
+		Dir(dir)
+
+	err := bin.Run()
+	require.NoError(t, err)
+
+	bin.Reset()
+
+	// After reset, should use current process directory
+	err = bin.Run()
+	assert.NoError(t, err)
+
+	cwd, err := os.Getwd()
+	require.NoError(t, err)
+
+	expected, err := filepath.EvalSymlinks(cwd)
+	require.NoError(t, err)
+
+	got := strings.TrimRight(string(bin.StdOut()), "\n")
+	gotResolved, err := filepath.EvalSymlinks(got)
+	require.NoError(t, err)
+
+	assert.Equal(t, expected, gotResolved)
 }
 
 func TestNonZeroExitCode(t *testing.T) {

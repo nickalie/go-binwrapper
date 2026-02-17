@@ -28,6 +28,7 @@ type BinWrapper struct {
 
 	args    []string
 	env     []string
+	dir     string
 	debug   bool
 	cmd     *exec.Cmd
 	mu      sync.Mutex
@@ -134,6 +135,13 @@ func (b *BinWrapper) Env(env []string) *BinWrapper {
 	return b
 }
 
+// Dir specifies the working directory of the executable.
+// If Dir is empty, Run uses the calling process's current directory.
+func (b *BinWrapper) Dir(dir string) *BinWrapper {
+	b.dir = dir
+	return b
+}
+
 // StdErr returns the executable's stderr after Run was called
 func (b *BinWrapper) StdErr() []byte {
 	return b.stdErr
@@ -147,6 +155,7 @@ func (b *BinWrapper) Reset() *BinWrapper {
 	b.stdIn = nil
 	b.stdOutWriter = nil
 	b.env = nil
+	b.dir = ""
 	b.mu.Lock()
 	b.cmd = nil
 	b.mu.Unlock()
@@ -164,6 +173,7 @@ func (b *BinWrapper) newCommand(arg []string) (*exec.Cmd, context.Context, conte
 	}
 
 	cmd := exec.CommandContext(ctx, b.Path(), arg...)
+	cmd.Dir = b.dir
 	cmd.Env = b.env
 	cmd.Stdin = b.stdIn
 
