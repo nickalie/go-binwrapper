@@ -190,11 +190,15 @@ func TestDir(t *testing.T) {
 	err := bin.Run()
 	assert.NoError(t, err)
 
-	// Resolve symlinks to handle cases like /tmp -> /private/tmp on macOS
+	// Resolve symlinks on both sides to handle cases like /var -> /private/var on macOS
 	expected, err := filepath.EvalSymlinks(dir)
 	require.NoError(t, err)
 
-	assert.Equal(t, expected+"\n", string(bin.StdOut()))
+	got := strings.TrimRight(string(bin.StdOut()), "\n")
+	gotResolved, err := filepath.EvalSymlinks(got)
+	require.NoError(t, err)
+
+	assert.Equal(t, expected, gotResolved)
 }
 
 func TestDirReset(t *testing.T) {
