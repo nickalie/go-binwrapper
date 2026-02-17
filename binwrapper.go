@@ -249,7 +249,7 @@ func (b *BinWrapper) Run(arg ...string) error {
 		return fmt.Errorf("failed to read stderr: %w", stderrErr)
 	}
 
-	if ctx.Err() == context.DeadlineExceeded {
+	if waitErr != nil && ctx.Err() == context.DeadlineExceeded {
 		return context.DeadlineExceeded
 	}
 
