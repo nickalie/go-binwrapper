@@ -3,6 +3,7 @@ package binwrapper_test
 import (
 	"bytes"
 	"context"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -52,7 +53,7 @@ func TestDest(t *testing.T) {
 		Dest("/usr/bin").
 		ExecPath("echo")
 
-	assert.Equal(t, "/usr/bin/echo", bin.Path())
+	assert.Equal(t, filepath.Join("/usr/bin", "echo"), bin.Path())
 }
 
 func TestPathWithDotDest(t *testing.T) {
