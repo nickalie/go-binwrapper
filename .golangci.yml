@@ -1,0 +1,67 @@
+version: "2"
+run:
+  tests: true
+linters:
+  default: none
+  enable:
+    - copyloopvar
+    - dupl
+    - gocritic
+    - gocyclo
+    - govet
+    - ineffassign
+    - lll
+    - misspell
+    - nakedret
+    - prealloc
+    - revive
+    - staticcheck
+    - unconvert
+    - unused
+    - funlen
+  settings:
+    gocritic:
+      disabled-checks:
+        - octalLiteral
+        - ifElseChain
+      enabled-tags:
+        - performance
+        - style
+    gocyclo:
+      min-complexity: 8
+    lll:
+      line-length: 140
+    misspell:
+      locale: US
+    revive:
+      rules:
+        - name: exported
+          arguments:
+            - disableStutteringCheck
+    funlen:
+      lines: 150
+  exclusions:
+    generated: lax
+    rules:
+      - linters:
+          - gocritic
+          - gocyclo
+          - lll
+          - unused
+          - funlen
+        path: _test\.go
+    paths:
+      - vendor
+      - third_party$
+      - builtin$
+      - examples$
+formatters:
+  enable:
+    - gofmt
+  exclusions:
+    generated: lax
+    paths:
+      - vendor
+      - third_party$
+      - builtin$
+      - examples$
