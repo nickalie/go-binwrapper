@@ -153,63 +153,42 @@ func (b *BinWrapper) Reset() *BinWrapper {
 	return b
 }
 
-// Run runs the binary with provided arg list.
-// Arg list is appended to args set through Arg method
-// Returns context.DeadlineExceeded in case of timeout
-func (b *BinWrapper) Run(arg ...string) error {
-	arg = append(b.args, arg...)
-	b.stdOut = nil
-	b.stdErr = nil
-
-	if b.debug {
-		fmt.Println("BinWrapper.Run: " + b.Path() + " " + strings.Join(arg, " "))
-	}
-
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+func (b *BinWrapper) newCommand(arg []string) (*exec.Cmd, context.Context, context.CancelFunc) {
+	var ctx context.Context
+	var cancel context.CancelFunc
 
 	if b.timeout > 0 {
-		ctx, cancel = context.WithTimeout(ctx, b.timeout)
-		defer cancel()
+		ctx, cancel = context.WithTimeout(context.Background(), b.timeout)
+	} else {
+		ctx, cancel = context.WithCancel(context.Background())
 	}
 
 	cmd := exec.CommandContext(ctx, b.Path(), arg...)
+	cmd.Env = b.env
+	cmd.Stdin = b.stdIn
 
-	if b.env != nil {
-		cmd.Env = b.env
-	}
+	return cmd, ctx, cancel
+}
 
-	if b.stdIn != nil {
-		cmd.Stdin = b.stdIn
-	}
-
-	var stdout io.Reader
-
+func (b *BinWrapper) setupPipes(cmd *exec.Cmd) (stdout, stderr io.Reader, err error) {
 	if b.stdOutWriter != nil {
 		cmd.Stdout = b.stdOutWriter
 	} else {
-		var err error
 		stdout, err = cmd.StdoutPipe()
 		if err != nil {
-			return fmt.Errorf("failed to create stdout pipe: %w", err)
+			return nil, nil, fmt.Errorf("failed to create stdout pipe: %w", err)
 		}
 	}
 
-	stderr, err := cmd.StderrPipe()
+	stderr, err = cmd.StderrPipe()
 	if err != nil {
-		return fmt.Errorf("failed to create stderr pipe: %w", err)
+		return nil, nil, fmt.Errorf("failed to create stderr pipe: %w", err)
 	}
 
-	err = cmd.Start()
-	if err != nil {
-		return err
-	}
+	return stdout, stderr, nil
+}
 
-	b.mu.Lock()
-	b.cmd = cmd
-	b.mu.Unlock()
-
-	var stdoutErr, stderrErr error
+func (b *BinWrapper) readPipes(stdout, stderr io.Reader) (stdoutErr, stderrErr error) {
 	var wg sync.WaitGroup
 
 	if stdout != nil {
@@ -227,6 +206,41 @@ func (b *BinWrapper) Run(arg ...string) error {
 	}()
 
 	wg.Wait()
+	return stdoutErr, stderrErr
+}
+
+// Run runs the binary with provided arg list.
+// Arg list is appended to args set through Arg method
+// Returns context.DeadlineExceeded in case of timeout
+func (b *BinWrapper) Run(arg ...string) error {
+	arg = append(b.args, arg...)
+	b.stdOut = nil
+	b.stdErr = nil
+
+	if b.debug {
+		fmt.Println("BinWrapper.Run: " + b.Path() + " " + strings.Join(arg, " "))
+	}
+
+	cmd, ctx, cancel := b.newCommand(arg)
+	defer cancel()
+
+	stdout, stderr, err := b.setupPipes(cmd)
+	if err != nil {
+		return err
+	}
+
+	b.mu.Lock()
+	err = cmd.Start()
+	if err != nil {
+		b.mu.Unlock()
+		return err
+	}
+	b.cmd = cmd
+	b.mu.Unlock()
+
+	stdoutErr, stderrErr := b.readPipes(stdout, stderr)
+
+	waitErr := cmd.Wait()
 
 	if stdoutErr != nil {
 		return fmt.Errorf("failed to read stdout: %w", stdoutErr)
@@ -235,13 +249,11 @@ func (b *BinWrapper) Run(arg ...string) error {
 		return fmt.Errorf("failed to read stderr: %w", stderrErr)
 	}
 
-	err = cmd.Wait()
-
 	if ctx.Err() == context.DeadlineExceeded {
 		return context.DeadlineExceeded
 	}
 
-	return err
+	return waitErr
 }
 
 // Kill terminates the process
